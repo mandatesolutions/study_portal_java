@@ -8,6 +8,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.studyportal.helper.Enums.UserStatus;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -55,6 +56,9 @@ public class CommonLogin {
     @JsonIgnore
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+    
+    @Column(unique = true, nullable = true, updatable = false)
+	private String uuid;
 
     @Enumerated(EnumType.STRING)
     @JsonIgnore

@@ -2,17 +2,14 @@ package com.studyportal.config;
 
 import java.io.IOException;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.studyportal.exception.AuthenticationException;
-import com.studyportal.helper.JwtHelper;
 import com.studyportal.service.CustomJwtUserDetailService;
+import com.studyportal.helper.JwtHelper;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -20,49 +17,55 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
-@Slf4j
+
 @Component
-public class JwtAuthenticationFilter extends OncePerRequestFilter{
-	
-	@Autowired
-	private CustomJwtUserDetailService customJwtUserDetailServcie;
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-	@Autowired
-	private JwtHelper jwtUtil;
+    private final CustomJwtUserDetailService userDetailsService;
+    private final JwtHelper jwtUtil;
 
-	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-			throws ServletException, IOException, AuthenticationException {
-		// Get JWT
-		String requestHeaderToken = request.getHeader("Authorization");
-		String username = null;
-		String jwtToken = null;
+    public JwtAuthenticationFilter(CustomJwtUserDetailService userDetailsService, JwtHelper jwtUtil) {
+        this.userDetailsService = userDetailsService;
+        this.jwtUtil = jwtUtil;
+    }
 
-		if (requestHeaderToken != null && requestHeaderToken.startsWith("Bearer ")) {
-			jwtToken = requestHeaderToken.substring(7);
-			try {
-				// Extract username from the token
-				username = jwtUtil.extractUsername(jwtToken);
-				request.setAttribute("userId", jwtUtil.extractUserId(jwtToken));
-			} catch (ExpiredJwtException e) {
-				throw new AuthenticationException("Token has expired", e);
-			} catch (JwtException e) {
-				throw new AuthenticationException("Invalid token", e);
-			}
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+        
+        // Bypass JWT filter for Swagger
+        if (request.getRequestURI().startsWith("/swagger-ui") || request.getRequestURI().startsWith("/v3/api-docs")) {
+            chain.doFilter(request, response);
+            return;
+        }
 
-			// Validate token
-			UserDetails userDetails = customJwtUserDetailServcie.loadUserByUsername(username);
-			if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-				UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,
-						null, userDetails.getAuthorities());
-				authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-				SecurityContextHolder.getContext().setAuthentication(authToken);
-			}
-		}
+        String tokenHeader = request.getHeader("Authorization");
+        String username = null;
+        String jwtToken = null;
 
-		chain.doFilter(request, response);
-	}
+        if (tokenHeader != null && tokenHeader.startsWith("Bearer ")) {
+            jwtToken = tokenHeader.substring(7);
+            try {
+                username = jwtUtil.extractUsername(jwtToken);
+            } catch (ExpiredJwtException e) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expired");
+                return;
+            } catch (JwtException e) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+                return;
+            }
+        }
 
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (jwtUtil.validateToken(jwtToken, userDetails)) {
+                var authToken = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        }
+
+        chain.doFilter(request, response);
+    }
 }
-
