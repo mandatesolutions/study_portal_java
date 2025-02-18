@@ -58,7 +58,7 @@ public class CommonLoginServiceImpl implements CommonLoginService {
 		}
 
 		// Check if the user is active
-		if (UserStatus.IN_ACTIVE.equals(user.get().getStatus())) {
+		if (UserStatus.INACTIVE.equals(user.get().getStatus())) {
 			resp.setStatus(CommonMessages.FAILED);
 			resp.setMessage("User is not active.");
 			return new ResponseEntity<>(resp, HttpStatus.FORBIDDEN);

@@ -6,7 +6,6 @@ import org.springframework.stereotype.Repository;
 import com.studyportal.entity.School;
 
 @Repository
-public interface SchoolRepository extends JpaRepository<School,Long>
-{
-
+public interface SchoolRepository extends JpaRepository<School, Long> {
+    boolean existsBySchoolName(String schoolName);
 }

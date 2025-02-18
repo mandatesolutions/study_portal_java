@@ -11,6 +11,6 @@ public class Enums {
 //	}
 
 	public enum UserStatus{
-		ACTIVE,IN_ACTIVE
+		ACTIVE,INACTIVE
 	}
 }

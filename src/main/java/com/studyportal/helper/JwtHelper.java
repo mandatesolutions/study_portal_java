@@ -121,7 +121,7 @@ public class JwtHelper {
 	// Generate the JWT token
 	public String generateToken(CommonLogin userDetails) {
 		Map<String, Object> claims = new HashMap<>();
-		if (UserStatus.IN_ACTIVE.name().equalsIgnoreCase(userDetails.getStatus().name())) {
+		if (UserStatus.INACTIVE.name().equalsIgnoreCase(userDetails.getStatus().name())) {
 			throw new AuthenticationException("User account is IN-ACTIVE. Token cannot be generated.", null);
 		}
 		claims.put("userId", userDetails.getUserId());
